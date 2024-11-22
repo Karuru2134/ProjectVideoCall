@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Meeting</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(45deg, #ff25be, #ff1f1f);
+      font-family: Arial, sans-serif;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    input {
+      background-color: #eee;
+      border: none;
+      margin: 8px 0;
+      padding: 10px 15px;
+      font-size: 13px;
+      border-radius: 8px;
+      width: 100%;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Modal Styles */
+    #modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      opacity: 0;
+      width: 450px;
+      padding: 30px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      transition: transform 0.3s ease-in, opacity 0.3s ease-in;
+    }
+
+    #modal.open {
+      display: block;
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+
+    #modal h2 {
+      margin-bottom: 15px;
+    }
+
+    .modal-content {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+
+    .meeting-item {
+      background-color: #f9f9f9;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: left;
+    }
+
+    .meeting-item button {
+      margin: 5px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .join-btn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .join-btn:hover {
+      background-color: #218838;
+    }
+
+    .erase-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .erase-btn:hover {
+      background-color: #c82333;
+    }
+
+    #modal-close {
+      display: block;
+      margin: 10px auto 0;
+      background-color: #ff4a4a;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #modal-close:hover {
+      background-color: #e60000;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>Create or Join Meeting</h1>
+    <input type="text" id="meetingName" placeholder="Enter meeting name" required />
+    <input type="text" id="username" placeholder="Enter your name" required />
+    <button onclick="storeMeeting()">Create Meeting</button>
+    <button onclick="toggleModal()">View Stored Meetings</button>
+  </div>
+
+  <div id="modal">
+    <h2>Stored Meetings</h2>
+    <div class="modal-content" id="meeting-list"></div>
+    <button id="modal-close" onclick="toggleModal()">Close</button>
+  </div>
+
+  <script>
+    // Store meeting name in local storage
+    function storeMeeting() {
+      const meetingName = document.getElementById("meetingName").value.trim();
+      const username = document.getElementById("username").value.trim();
+
+      if (meetingName && username) {
+        let meetings = JSON.parse(localStorage.getItem("meetings")) || [];
+        meetings.push({ name: meetingName, creator: username });
+        localStorage.setItem("meetings", JSON.stringify(meetings));
+
+        // Redirect to VideoCallPage.html
+        window.location.href = `VideoCallPage.html?meetingName=${encodeURIComponent(meetingName)}&username=${encodeURIComponent(username)}`;
+      } else {
+        alert("Please enter both a meeting name and your name.");
+      }
+    }
+
+    // Toggle modal visibility
+    function toggleModal() {
+      const modal = document.getElementById("modal");
+      modal.classList.toggle("open");
+      if (modal.classList.contains("open")) {
+        populateStoredMeetings();
+      }
+    }
+
+    // Populate the stored meetings list
+    function populateStoredMeetings() {
+      const meetingList = document.getElementById("meeting-list");
+      meetingList.innerHTML = ""; // Clear previous entries
+      const meetings = JSON.parse(localStorage.getItem("meetings")) || [];
+
+      if (meetings.length === 0) {
+        meetingList.innerHTML = "<p>No stored meetings found.</p>";
+        return;
+      }
+
+      meetings.forEach((meeting, index) => {
+        const meetingDiv = document.createElement("div");
+        meetingDiv.classList.add("meeting-item");
+        meetingDiv.innerHTML = `
+          <strong>Meeting Name:</strong> ${meeting.name} <br>
+          <strong>Created by:</strong> ${meeting.creator}
+          <button class="join-btn" onclick="joinStoredMeeting('${meeting.name}')">Join</button>
+          <button class="erase-btn" onclick="eraseMeeting(${index})">Erase</button>
+        `;
+        meetingList.appendChild(meetingDiv);
+      });
+    }
+
+    // Redirect to the selected meeting
+    function joinStoredMeeting(meetingName) {
+      const username = prompt("Enter your name to join the meeting:");
+      if (username) {
+        window.location.href = `VideoCallPage.html?meetingName=${encodeURIComponent(meetingName)}&username=${encodeURIComponent(username)}`;
+      }
+    }
+
+    // Erase a meeting from local storage
+    function eraseMeeting(index) {
+      let meetings = JSON.parse(localStorage.getItem("meetings")) || [];
+      meetings.splice(index, 1); // Remove the meeting by index
+      localStorage.setItem("meetings", JSON.stringify(meetings));
+      populateStoredMeetings(); // Refresh the modal content
+    }
+  </script>
+</body>
+</html>

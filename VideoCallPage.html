@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jitsi Video Call</title>
+  <script src="https://meet.jit.si/external_api.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #000;
+    }
+    #meet-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+    }
+    #footer {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      color: #fff;
+      font-size: 12px;
+      font-family: Arial, sans-serif;
+      opacity: 0.7;
+    }
+    /* Custom chat box */
+    #custom-chat {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      width: 300px;
+    }
+    #messages-container {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+    #message-input {
+      width: 80%;
+      padding: 5px;
+    }
+    #send-button {
+      padding: 5px;
+      width: 15%;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    /* Share screen button */
+    #share-screen {
+      position: absolute;
+      bottom: 50px;
+      left: 10px;
+      padding: 10px 15px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="meet-container"></div>
+  <div id="footer">Made by Simon Goh Wee Hung</div>
+
+  <!-- Custom Chat Box -->
+  <div id="custom-chat">
+    <div id="messages-container"></div>
+    <input type="text" id="message-input" placeholder="Type a message..."/>
+    <button id="send-button" onclick="sendMessage()">Send</button>
+  </div>
+
+  <!-- Share Screen Button -->
+  <button id="share-screen" onclick="toggleScreenSharing()">Share Screen</button>
+
+  <script>
+    // Retrieve the meeting name and username from URL parameters
+    function getQueryParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        meetingName: params.get("meetingName") || "DefaultRoom",
+        username: params.get("username") || "User",
+      };
+    }
+
+    // Function to start the Jitsi conference
+    function startConference(meetingName, username) {
+      const domain = "meet.jit.si";
+      const options = {
+        roomName: meetingName,
+        parentNode: document.getElementById("meet-container"),
+        interfaceConfigOverwrite: {
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_BRAND_WATERMARK: false,
+          SHOW_POWERED_BY: false,
+          DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+          PREJOIN_PAGE_ENABLED: false,
+        },
+        userInfo: {
+          displayName: username,
+        },
+      };
+
+      const api = new JitsiMeetExternalAPI(domain, options);
+
+      // Listen for participant joining
+      api.addEventListener("participantJoined", (participant) => {
+        console.log("Participant joined:", participant);
+      });
+
+      // Listen for participant leaving
+      api.addEventListener("participantLeft", (participant) => {
+        console.log("Participant left:", participant);
+      });
+
+      // Listen for conference joining
+      api.addEventListener("videoConferenceJoined", (participant) => {
+        console.log("Conference joined by:", participant);
+      });
+
+      // Listen for conference left
+      api.addEventListener("videoConferenceLeft", () => {
+        console.log("Conference ended.");
+      });
+
+      // Listen for incoming chat messages
+      api.addEventListener("messageReceived", (event) => {
+        const message = event.message;  // The message content
+        const sender = event.sender;    // The sender information
+
+        // Append the received message to the custom chat box
+        const messageContainer = document.getElementById("messages-container");
+        const messageElement = document.createElement("div");
+        messageElement.textContent = `${sender}: ${message}`;
+        messageContainer.appendChild(messageElement);
+        messageContainer.scrollTop = messageContainer.scrollHeight; // Auto-scroll to the latest message
+      });
+
+      window.api = api; // Store the API object globally
+    }
+
+    // Send custom chat message
+    function sendMessage() {
+      const messageInput = document.getElementById("message-input");
+      const message = messageInput.value;
+      if (message) {
+        // Send the message to the Jitsi chat
+        api.executeCommand('sendMessage', message);
+        messageInput.value = ""; // Clear the input field
+      }
+    }
+
+    // Toggle screen sharing
+    function toggleScreenSharing() {
+      api.executeCommand('toggleShareScreen');
+    }
+
+    // Get meeting name and username from URL parameters
+    const { meetingName, username } = getQueryParams();
+    startConference(meetingName, username);
+  </script>
+</body>
+</html>
